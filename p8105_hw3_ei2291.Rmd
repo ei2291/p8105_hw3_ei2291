@@ -1,0 +1,86 @@
+---
+title: "Homework 3"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(p8105.datasets)
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+```
+
+##Problem 1
+
+Import the instacart data
+
+```{r}
+data("instacart")
+```
+
+The dataset tells us briefly about how many people ordered their groceries online through instacart. It tells us what they ordered etc. The dataset has 1,384,617 observations and 15 variables.Since this dataset shows a single order per user, Some key variables are `user_id`. `product_id`, `order_id`, `order_number`, `aisle`, `product_name`, `order_number`.
+
+```{r}
+head(instacart,5)
+```
+
+This gives us the first five rows.
+
+```{r}
+total_aisles_df = 
+  instacart |> 
+  summarize(total_aisles_df=n_distinct(aisle))
+
+most_aisle_counts =
+  instacart |> 
+  group_by(aisle_id, aisle) |> 
+  summarize(n_items=n()) |> 
+  arrange(desc(n_items))
+```
+The total number of aisle is 134.
+The top five aisles that have the most items ordered from are aisles 83, 24, 123,120, 21 with fresh vegetables, fresh fruits, packed vegetables fruits, yogurt then packaged chips, respectively.  
+
+
+```{r}
+instacart |> 
+  group_by(aisle) |> 
+  summarize(n_items=n()) |> 
+  filter(n_items> 10000) |> 
+  arrange(desc(n_items)) |>
+  ggplot(aes(x=reorder(aisle, n_items), y=n_items))+
+  geom_col( fill ="steelblue")+
+    labs(
+    x= "Aisle",
+    y = "No. of items ordered",
+    title = "No. of items ordered in each Aisle for >10,000"
+  )+
+  coord_flip()+
+  theme_minimal()
+```
+
+
+
+
+
+
+
+
+
+
+
+
