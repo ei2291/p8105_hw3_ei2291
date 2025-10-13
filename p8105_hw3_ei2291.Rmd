@@ -286,7 +286,7 @@ combined_plot = plot_year/plot_2023
 
 ```{r}
 ggsave(
-  filename="nyc_combined_rentals.png",
+  filename="results/nyc_combined_rentals.png",
   plot = combined_plot,
   width=12,
   height =10,
