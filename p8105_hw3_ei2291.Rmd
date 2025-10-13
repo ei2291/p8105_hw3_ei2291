@@ -114,6 +114,193 @@ instacart |>
   knitr::kable()
 ```
 
+## Problem 2
+
+Import and clean dataset
+
+```{r}
+zipcodes_county_df=
+  read_csv("Zip Codes.csv") |> 
+  janitor::clean_names() |> 
+  mutate(
+    county = case_when(
+      county == "New York" ~ "Manhattan",
+      county == "Kings" ~ "Brooklyn",
+      county == "Richmond" ~ "Staten Island",
+      TRUE ~ county
+    )
+  ) |> 
+  distinct(zip_code,.keep_all=TRUE)
+```
+
+Import and clean dataset 2
+
+```{r}
+zipcodes_neighborhood_df=
+  read_csv("Zip codes neighborhood.csv") |> 
+  janitor::clean_names() |> 
+  pivot_longer(
+    cols = starts_with ("x20"),
+    names_to= "date",
+    values_to = "zori"
+  ) |> 
+  rename(county=county_name,
+         zip_code=region_id) |> 
+  mutate(date = lubridate::ymd(str_remove(date, "^x")),
+         county = case_when(
+    county == "New York County" ~ "Manhattan",
+    county == "Kings County" ~ "Brooklyn",
+    county == "Richmond County" ~ "Staten Island",
+    county == "Queens County" ~ "Queens",
+    county == "Bronx County" ~ "Bronx",
+    TRUE ~ county)) 
+```
+
+Join datasets
+```{r}
+combined_df=
+  left_join(zipcodes_neighborhood_df, zipcodes_county_df, by="zip_code") |> 
+  select(-county.y) |> 
+  rename(county = county.x) |> 
+  relocate(zip_code,county) |> 
+  arrange(zip_code, county)
+```
+
+```{r}
+combined_df |> 
+  group_by(zip_code) |> 
+  summarize(zip_observed = n()) |> 
+  filter(zip_observed == 116) |> 
+  nrow()
+```
+
+```{r}
+combined_df |> 
+  group_by(zip_code) |> 
+  summarize(zip_observed = n()) |> 
+  filter(zip_observed < 10) 
+```
+
+149 zip codes were obsereved 116 times, and 0 zipcodes were observed less than 10 times from January 2015 to August 2024.Some zipcodes are observed less than other because either data might be missing for certain months or those areas have few rental listings, while for those observed in each month are probably ones located in active areas and have data throughout the period.
+
+Average rental price in each borough and year
+
+```{r}
+combined_df |> 
+  select(date, county, zori) |> 
+  mutate(year = year(date)) |> 
+  group_by(county, year) |> 
+  summarize(avg_rent = mean(zori, na.rm =TRUE) ) |> 
+  arrange (county, year, avg_rent) |> 
+  pivot_wider(
+    names_from = year,
+    values_from = avg_rent
+  ) |> 
+  knitr::kable(digits=2)
+  
+```
+
+Throughout all the boroughs, the average rental prices increased from 2015 to 2024. Staten Island initially didn't have data and first data input was in 2020. Manhattan had the highest prices throughout, followed by Brooklyn and Queens.
+
+
+```{r}
+combined_df |> 
+  select(date, county, zori, zip_code) |> 
+  mutate(year = year(date)) |> 
+  ggplot(aes(x=year, y=zori, group=zip_code, color=county))+
+  geom_line(alpha=0.3)+
+  stat_summary(aes(group=county),fun = median, geom ="line",  color = "black" )+
+  facet_wrap(~county, scales = "free_y") +
+  scale_x_continuous(
+    breaks=seq(2015, 2024, by = 1),
+    expand = c(0.01, 0)
+    ) +
+   labs(
+    title = "NYC Rental Prices by ZIP Code Across Boroughs (2015-2024)",
+    x = "Year",
+    y = "ZORI (rent)",
+    color = "borough")+
+  theme_minimal()
+  
+```
+
+This is a plot of the different zipcode level rent price trends for the five boroughs from 2015 to 2024. As we can see in the graph, rental prices overall increased in all the borough with a slight dip in 2020 which is likely due to covid-19. Staten Island data later became available starting 2020 and it generally has lower rent. Manhattan has he highest rent followed by Brooklyn and Queens.
+
+
+```{r}
+combined_df |> 
+  filter(year(date) ==2023) |> 
+  group_by(zip_code, county, date) |> 
+  summarize(avg_rent = mean(zori, na.rm=TRUE), .groups="drop") |> 
+  ggplot(aes(x=county, y=avg_rent, fill=county))+
+  geom_boxplot(alpha=0.7)+
+  labs(
+    title = "Zipcode levels for averagre rent prices in 2023",
+    x = "Borough",
+    y = "Average rent price",
+    fill = "Borough"
+         )+
+  theme_minimal()
+```
+Based on the plot, we can see that Manhattan had the highest rent price then Brooklyn then Queens then Bronx. Staten Island had the lowest average rent. Manhattan then Brooklyn show variation of prices based on zipcode.
+
+```{r}
+library (patchwork)
+```
+
+```{r}
+plot_year = combined_df |> 
+  select(date, county, zori, zip_code) |> 
+  mutate(year = year(date)) |> 
+  ggplot(aes(x=year, y=zori, group=zip_code, color=county))+
+  geom_line(alpha=0.3)+
+  stat_summary(aes(group=county),fun = median, geom ="line",  color = "black" )+
+  facet_wrap(~county, scales = "free_y") +
+  scale_x_continuous(
+    breaks=seq(2015, 2024, by = 1),
+    expand = c(0.01, 0)
+    ) +
+   labs(
+    title = "NYC Rental Prices by ZIP Code Across Boroughs (2015-2024)",
+    x = "Year",
+    y = "ZORI (rent)",
+    color = "borough")+
+  theme_minimal()
+
+plot_2023=combined_df |> 
+  filter(year(date) ==2023) |> 
+  group_by(zip_code, county, date) |> 
+  summarize(avg_rent = mean(zori, na.rm=TRUE), .groups="drop") |> 
+  ggplot(aes(x=county, y=avg_rent, fill=county))+
+  geom_boxplot(alpha=0.7)+
+  labs(
+    title = "Zipcode levels for averagre rent prices in 2023",
+    x = "Borough",
+    y = "Average rent price",
+    fill = "Borough"
+         )+
+  theme_minimal()
+
+combined_plot = plot_year/plot_2023
+```
+
+```{r}
+ggsave(
+  filename="nyc_combined_rentals.png",
+  plot = combined_plot,
+  width=12,
+  height =10,
+  bg="white"
+)
+```
+
+
+
+
+
+
+
+
 
 
 
