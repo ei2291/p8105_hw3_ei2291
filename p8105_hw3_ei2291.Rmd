@@ -294,6 +294,133 @@ ggsave(
 )
 ```
 
+## Problem 3
+
+load and clean 
+```{r}
+nhanes_demo =
+  read_csv("nhanes_covar.csv", skip=4) |> 
+  janitor::clean_names() |> 
+  mutate(
+    sex = recode(sex,
+         `1` = "male",
+         `2` = "female"
+                 ),
+    education = recode(education,
+         `1` = "less than high school",
+         `2` = "high school equivalent",
+         `3` = "more than high school"
+                       )
+  ) |> 
+filter(age >=21) |> 
+  drop_na()
+```
+
+```{r}
+nhanes_accel=
+  read_csv("nhanes_accel.csv") |> 
+  janitor::clean_names() |> 
+  pivot_longer(
+    cols = starts_with("min"),
+    names_to = "minute",
+    values_to = "MIMS"
+  ) |> 
+  mutate(minute=as.integer(str_remove(minute, "min"))) |> 
+drop_na()
+```
+
+merging both
+
+```{r}
+nhanes_combined = 
+  nhanes_accel |> 
+  inner_join(nhanes_demo, by ="seqn")
+```
+
+table for number of men and women in each education category
+
+```{r}
+nhanes_combined |> 
+  group_by(education, sex) |> 
+  summarize(n = n_distinct(seqn), .groups = "drop") |> 
+  pivot_wider(
+    names_from = sex,
+    values_from = n
+  ) |> 
+  knitr::kable()
+```
+From the table the most participants are with more than high school education. In those female are the most closely followed by male. for the less than high school there are almost the same number of participants from both sex. the greatest difference is seen in the high school equivalent, where male outnumber female significantly.
+
+
+Visualization of the age distribution for men and women in each category
+
+```{r}
+nhanes_combined |> 
+  select(sex, education, age, seqn) |> 
+  distinct() |> 
+  ggplot(aes(x=age, fill=sex))+
+  geom_histogram(position = "dodge",binwidth = 5, color = "black") + 
+  facet_wrap(~ education) +
+  labs(
+    title = "Age Distribution by Sex and Education",
+    x = "Age",
+    y = "The number of participants",
+    fill = "Sex"
+  )+
+  theme_minimal()
+```
+Based on the plot the most participants are people with more than high school education with female age group from 20-40 being the most.
+
+Total Daily Activity Vs. Age by Sex and Education
+
+```{r} 
+nhanes_total =
+  nhanes_combined |> 
+  group_by(seqn, sex, age, education) |>   summarize(tot_MIMS = round(sum(MIMS, na.rm=TRUE), 2), .group="drop") 
+
+nhanes_total |> 
+  ggplot(aes(x=age, y=tot_MIMS, color =sex))+
+  geom_point(alpha=0.6) +
+  geom_smooth(SE = FALSE, method = "loess")+
+  facet_wrap(~education)+
+  labs(
+    title = "Total daily activity vs age by sex and education",
+    x = "Age",
+    y = "Total MIMS",
+    color = "Sex"
+  )+
+  theme_minimal()
+
+```
+
+As seen in the plot, in individuals with a high school equivalent, females had the highest average total MIMS (total daily activity) especially those from age group 30 to 50. In the less than high school education category. the peak is seen around age group 60, where male had the overall average higher average total daily activity. For individuals with more than high school education, the trendline was pretty constant but on average female through out had a higher average total daily activity, but both sex were more or less close. Something seen in both sex and education level is that as age increases with 60+ average total daily activity gradually decreases.
+
+24-Hour Activity by Sex and Education Level
+
+```{r}
+nhanes_minute =
+  nhanes_combined |> 
+  group_by(minute, sex, education) |> 
+  summarize(mean_MIMS = round(mean(MIMS, na.rm = TRUE), 2), .group="drop")
+
+nhanes_minute |> 
+  ggplot(aes(x=minute, y= mean_MIMS, color =sex)) +
+  geom_line (alpha=0.8)+
+  geom_smooth( se = FALSE, method = "loess")+
+  facet_wrap(~education, ncol=1)+
+  labs(
+    title = "24 hour Activity by Sex and Education",
+    x = "Minute of the day",
+    y = "Average MIMS/Activity",
+    color = "Sex"
+  )+
+  theme_minimal()
+```
+In all three education level plots, we see the highest average activity to be from the 500 to about 1000 minute of the day which then gradually declines. Both male and female have about the same/similar average activity by minute of the day especially for those that have a less than high school equivalent and high school equivalent. For those that have more than a high school education, we see that female for the most part throughout the day had a higher average MIMS.
+
+
+
+
 
 
 
