@@ -58,7 +58,7 @@ The top five aisles that have the most items ordered from are aisles 83, 24, 123
 
 
 Plot for number of items ordered in each aisle >10,000
-```{r}
+```{r, fig.width=10, fig.height=8}
 instacart |> 
   group_by(aisle) |> 
   summarize(n_items=n()) |> 
@@ -203,7 +203,7 @@ combined_df |>
 Throughout all the boroughs, the average rental prices increased from 2015 to 2024. Staten Island initially didn't have data and first data input was in 2020. Manhattan had the highest prices throughout, followed by Brooklyn and Queens.
 
 
-```{r}
+```{r, fig.width=12, fig.height=8}
 combined_df |> 
   select(date, county, zori, zip_code) |> 
   mutate(year = year(date)) |> 
@@ -316,6 +316,7 @@ filter(age >=21) |>
   drop_na()
 ```
 
+
 ```{r}
 nhanes_accel=
   read_csv("nhanes_accel.csv") |> 
@@ -376,12 +377,12 @@ Total Daily Activity Vs. Age by Sex and Education
 ```{r} 
 nhanes_total =
   nhanes_combined |> 
-  group_by(seqn, sex, age, education) |>   summarize(tot_MIMS = round(sum(MIMS, na.rm=TRUE), 2), .group="drop") 
+  group_by(seqn, sex, age, education) |>   summarize(tot_MIMS = round(sum(MIMS, na.rm=TRUE), 2), .groups = "drop") 
 
 nhanes_total |> 
   ggplot(aes(x=age, y=tot_MIMS, color =sex))+
   geom_point(alpha=0.6) +
-  geom_smooth(SE = FALSE, method = "loess")+
+  geom_smooth(Se = FALSE, method = "loess")+
   facet_wrap(~education)+
   labs(
     title = "Total daily activity vs age by sex and education",
